@@ -1,0 +1,144 @@
+[1mdiff --git a/app/models/post_image.rb b/app/models/post_image.rb[m
+[1mindex e0465e4..6217c08 100644[m
+[1m--- a/app/models/post_image.rb[m
+[1m+++ b/app/models/post_image.rb[m
+[36m@@ -2,6 +2,7 @@[m [mclass PostImage < ApplicationRecord[m
+   has_one_attached :image[m
+   belongs_to :user[m
+     has_many :post_comments, dependent: :destroy[m
+[32m+[m[32m    has_many :favorites, dependent: :destroy[m
+   [m
+   def get_image[m
+     unless image.attached?[m
+[36m@@ -10,4 +11,9 @@[m [mclass PostImage < ApplicationRecord[m
+     end[m
+     image[m
+   end[m
+[32m+[m[41m  [m
+[32m+[m[32m    def favorited_by?(user)[m
+[32m+[m[32m          favorites.exists?(user_id: user.id)[m
+[32m+[m[32m  end[m
+[32m+[m[41m  [m
+ end[m
+[1mdiff --git a/app/models/user.rb b/app/models/user.rb[m
+[1mindex e3a02dc..8fc7d50 100644[m
+[1m--- a/app/models/user.rb[m
+[1m+++ b/app/models/user.rb[m
+[36m@@ -6,6 +6,7 @@[m [mclass User < ApplicationRecord[m
+          [m
+         has_many :post_images[m
+         has_many :post_comments, dependent: :destroy[m
+[32m+[m[32m        has_many :favorites, dependent: :destroy[m
+         has_one_attached :profile_image[m
+          [m
+       has_one_attached :profile_image[m
+[1mdiff --git a/app/views/post_images/index.html.erb b/app/views/post_images/index.html.erb[m
+[1mindex 729af70..0e767a0 100644[m
+[1m--- a/app/views/post_images/index.html.erb[m
+[1m+++ b/app/views/post_images/index.html.erb[m
+[36m@@ -1,15 +1 @@[m
+[31m-<% @post_images.each do |post_image| %>[m
+[31m-  <div>[m
+[31m-    <%= link_to post_image_path(post_image.id) do %>[m
+[31m-    <%= image_tag post_image.get_image %>[m
+[31m-  <% end %>[m
+[31m-    [m
+[31m-    <p>投稿ユーザー画像：<%= image_tag post_image.user.get_profile_image(100,100) %></p>[m
+[31m-  [m
+[31m-    <%= image_tag post_image.get_image %>[m
+[31m-    <p>ショップ名：<%= post_image.shop_name %></p>[m
+[31m-    <p>説明：<%= post_image.caption %></p>[m
+[31m-    <p>ユーザーネーム：<%= post_image.user.name %></p>[m
+[31m-    <p><%= link_to "#{post_image.post_comments.count} コメント", post_image_path(post_image.id) %></p>[m
+[31m-  </div>[m
+[31m-<% end %>[m
+[32m+[m[32m<%= render 'list', post_images: @post_images %>[m
+\ No newline at end of file[m
+[1mdiff --git a/app/views/post_images/show.html.erb b/app/views/post_images/show.html.erb[m
+[1mindex aed27fb..812e252 100644[m
+[1m--- a/app/views/post_images/show.html.erb[m
+[1m+++ b/app/views/post_images/show.html.erb[m
+[36m@@ -9,6 +9,19 @@[m
+   <% if @post_image.user == current_user %>[m
+   <%= link_to "削除", post_image_path(@post_image), method: :delete %>[m
+   <% end %>[m
+[32m+[m[32m    <% if @post_image.favorited_by?(current_user) %>[m
+[32m+[m[32m    <p>[m
+[32m+[m[32m      <%= link_to post_image_favorite_path(@post_image), method: :delete do %>[m
+[32m+[m[32m        ♥<%= @post_image.favorites.count %> いいね[m
+[32m+[m[32m      <% end %>[m
+[32m+[m[32m    </p>[m
+[32m+[m[32m    <% else %>[m
+[32m+[m[32m    <p>[m
+[32m+[m[32m      <%= link_to post_image_favorite_path(@post_image), method: :post do %>[m
+[32m+[m[32m        ♡<%= @post_image.favorites.count %> いいね[m
+[32m+[m[32m      <% end %>[m
+[32m+[m[32m    </p>[m
+[32m+[m[32m  <% end %>[m
+ </div>[m
+ [m
+ <div>[m
+[1mdiff --git a/app/views/user/show.html.erb b/app/views/user/show.html.erb[m
+[1mindex 9459737..3ca2b28 100644[m
+[1m--- a/app/views/user/show.html.erb[m
+[1m+++ b/app/views/user/show.html.erb[m
+[36m@@ -6,18 +6,4 @@[m
+   <p><%= link_to "プロフィール編集",edit_user_path(@user.id) %></p>[m
+   <% end %>[m
+ </div>[m
+[31m-[m
+[31m-<!-- ユーザーの投稿一覧 -->[m
+[31m-[m
+[31m-<% @post_images.each do |post_image| %>[m
+[31m-<div>[m
+[31m-  <%= link_to post_image_path(post_image.id) do %>[m
+[31m-    <%= image_tag post_image.get_image %>[m
+[31m-  <% end %>[m
+[31m-  <p>投稿ユーザー画像：<%= image_tag post_image.user.get_profile_image(100,100) %></p>[m
+[31m-  <p>ショップ名：<%= post_image.shop_name %></p>[m
+[31m-  <p>説明：<%= post_image.caption %></p>[m
+[31m-  <p>ユーザーネーム：<%= post_image.user.name %></p>[m
+[31m-  <p><%= link_to "#{post_image.post_comments.count} コメント", post_image_path(post_image.id) %></p>[m
+[31m-</div>[m
+[31m-<% end %>[m
+[32m+[m[32m<%= render 'post_images/list', post_images: @post_images %>[m
+\ No newline at end of file[m
+[1mdiff --git a/config/routes.rb b/config/routes.rb[m
+[1mindex ce1f827..0d44e20 100644[m
+[1m--- a/config/routes.rb[m
+[1m+++ b/config/routes.rb[m
+[36m@@ -3,6 +3,7 @@[m [mRails.application.routes.draw do[m
+   root to: 'homes#top'[m
+   get '/homes/about' => 'homes#about',as:'about'[m
+   resources :post_images, only: [:new, :create, :index, :show, :destroy] do[m
+[32m+[m[32m    resource :favorite, only: [:create, :destroy][m
+     resources :post_comments, only: [:create,:destroy][m
+   end[m
+   resources :user,only:[:show,:destroy,:edit,:update][m
+[1mdiff --git a/db/schema.rb b/db/schema.rb[m
+[1mindex d4a3a77..2660b32 100644[m
+[1m--- a/db/schema.rb[m
+[1m+++ b/db/schema.rb[m
+[36m@@ -10,7 +10,7 @@[m
+ #[m
+ # It's strongly recommended that you check this file into your version control system.[m
+ [m
+[31m-ActiveRecord::Schema.define(version: 2024_07_14_064004) do[m
+[32m+[m[32mActiveRecord::Schema.define(version: 2024_07_14_112119) do[m
+ [m
+   create_table "active_storage_attachments", force: :cascade do |t|[m
+     t.string "name", null: false[m
+[36m@@ -40,6 +40,13 @@[m [mActiveRecord::Schema.define(version: 2024_07_14_064004) do[m
+     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true[m
+   end[m
+ [m
+[32m+[m[32m  create_table "favorites", force: :cascade do |t|[m
+[32m+[m[32m    t.integer "user_id"[m
+[32m+[m[32m    t.integer "post_image_id"[m
+[32m+[m[32m    t.datetime "created_at", precision: 6, null: false[m
+[32m+[m[32m    t.datetime "updated_at", precision: 6, null: false[m
+[32m+[m[32m  end[m
+[32m+[m
+   create_table "post_comments", force: :cascade do |t|[m
+     t.text "comment"[m
+     t.integer "user_id"[m
